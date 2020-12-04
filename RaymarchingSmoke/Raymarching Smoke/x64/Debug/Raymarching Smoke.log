@@ -1,0 +1,2 @@
+﻿  main.cpp
+d:\college\uci\_restart\cs 112\raymarchingsmoke\raymarching smoke\raymarching smoke\src\main.cpp(1): fatal error C1083: Cannot open include file: 'GLFW/glfw3.h': No such file or directory
