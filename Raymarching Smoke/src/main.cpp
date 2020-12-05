@@ -30,7 +30,7 @@ static unsigned int CompileShader(const std::string& source, unsigned int type)
 static int CreateShader(const std::string& vertexShader, const std::string& fragmentShader) {
 	unsigned int program = glCreateProgram();
 	unsigned int vs = CompileShader(vertexShader, GL_VERTEX_SHADER);
-	unsigned int fs = CompileShader(vertexShader, GL_FRAGMENT_SHADER);
+	unsigned int fs = CompileShader(fragmentShader, GL_FRAGMENT_SHADER);
 
 	glAttachShader(program, vs);
 	glAttachShader(program, fs);
