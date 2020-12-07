@@ -8,6 +8,7 @@
 #include "VertexArray.h"
 #include "VertexBufferLayout.h"
 #include "Texture.h"
+#include "Camera.h"
 
 #include <iostream>
 #include "glm/glm.hpp"
@@ -47,6 +48,43 @@ int main(void)
 
 	std::cout << glGetString(GL_VERSION) << std::endl;
 	{
+		float cubePositions[] = {
+			1, 1, 1,
+			1, -1, 1,
+			-1, 1, 1,
+			-1, -1, 1,
+			1, 1, -1,
+			1, -1, -1,
+			-1, 1, -1,
+			-1, -1, -1,
+		};
+
+		unsigned int cubeIndices[] = {
+			6, 4, 0,
+			0, 2, 6,
+			2, 0, 1,
+			1, 3, 2,
+			3, 1, 5,
+			5, 7, 3,
+			7, 5, 4,
+			4, 6, 7,
+			0, 4, 5,
+			5, 1, 0,
+			6, 2, 3,
+			3, 7, 6,
+		};
+
+		unsigned int cubeNormals[] = {
+			1, 1, 1,
+			1, -1, 1,
+			-1, 1, 1,
+			-1, -1, 1,
+			1, 1, -1,
+			1, -1, -1,
+			-1, 1, -1,
+			-1, -1, -1,
+		};
+
 		float positions[] = {
 			-0.5f, -0.5f, 0.0f, 0.0f,
 			 0.5f, -0.5f, 1.0f, 0.0f,
@@ -66,14 +104,24 @@ int main(void)
 		GLCall(glGenVertexArrays(1, &vao));
 		GLCall(glBindVertexArray(vao));
 
-		VertexArray va;
+		
+		/*VertexArray va;
 		VertexBuffer vb(positions, 4 * 4 * sizeof(float));
 		VertexBufferLayout layout;
 		layout.Push<float>(2);
 		layout.Push<float>(2);
 		va.AddBuffer(vb, layout);
+		
+		IndexBuffer ib(indices, 6);*/
 
-		IndexBuffer ib(indices, 6);
+		VertexArray va;
+		VertexBuffer vb(cubePositions, 8 * 3 * sizeof(float));
+		VertexBufferLayout layout;
+		layout.Push<float>(3);
+		va.AddBuffer(vb, layout);
+
+		IndexBuffer ib(cubeIndices, 36);
+
 
 		// Display range 0.1f units <----> 100.0f units
 		// glm::mat4 proj = glm::ortho(-2.0f, 2.0f, -1.5f, 1.5f, 0.1f, 100.0f);
@@ -92,6 +140,7 @@ int main(void)
 		shader.Unbind();
 
 		Renderer renderer;
+		renderer.EnableDepthTesting();
 
 		// setup ImGui
 		IMGUI_CHECKVERSION();
@@ -105,25 +154,12 @@ int main(void)
 		bool display_second_object = true;
 		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-		glm::vec3 translationA(0.5, 0.5, 0);
+		glm::vec3 translationA(0, 0, 0);
 		glm::vec3 translationB(-0.5, -0.5, 0);
 
-		float cameraMinFloat = -100.0f;
-		float cameraMaxFloat = 100.0f;
+		Camera cam = Camera(0.0f, 10.0f, 0.0f);
 
-		float cameraX = -4.0f;
-		float cameraY = 3.0f;
-		float cameraZ = 3.0f;
-
-		float radius = 1;
-		float angle = 0;
-
-
-		glm::vec3 cameraPos = glm::vec3(cameraX, cameraY, cameraZ);
-
-		bool flipCamera = false;
-		int headY = 1;
-
+		float radius = 10;
 		/* Loop until the user closes the window */
 		while (!glfwWindowShouldClose(window))
 		{
@@ -136,31 +172,22 @@ int main(void)
 			
 			shader.Bind();
 			
-			angle += 0.01f;
+			cam.rotateCamera(radius);
 
-			// make camera move in circle
-			cameraX = radius * sin(angle);
-			cameraZ = radius * cos(angle);
-
-			headY = flipCamera ? -1 : 1;
 			// Change the camera position in real time
-			glm::mat4 view = glm::lookAt(
-				//glm::vec3(4, 3, 3), // Camera is at (4,3,3), in World Space
-				glm::vec3(cameraX, cameraY, cameraZ),
-				glm::vec3(0, 0, 0), // and looks at the origin
-				glm::vec3(0, headY, 0)  // Head is up (set to 0,-1,0 to look upside-down)
-			);
+			glm::mat4 view = cam.getView();
 
 			// render object 1
 			if (display_first_object)
 			{
-				glm::mat4 model = glm::translate(glm::mat4(1.0f), translationA);
+				glm::mat4 model = glm::mat4(1.0f);
 				glm::mat4 mvp = proj * view * model;
 				shader.SetUniformMat4f("u_MVP", mvp);
 				renderer.Draw(va, ib, shader);
 			}
 
 			// render object 2
+			
 			if (display_second_object)
 			{
 				glm::mat4 model = glm::translate(glm::mat4(1.0f), translationB);
@@ -168,6 +195,7 @@ int main(void)
 				shader.SetUniformMat4f("u_MVP", mvp);
 				renderer.Draw(va, ib, shader);
 			}
+			
 
 			{
 				static float f = 0.0f;
@@ -178,11 +206,10 @@ int main(void)
 				ImGui::Text("Edit the scene in real time with the settings below.");        // Display some text (you can use a format strings too)
 				ImGui::Checkbox("Show first object", &display_first_object);				// Edit bools storing our window open/close state
 				ImGui::Checkbox("Show second object", &display_second_object);
-				ImGui::Checkbox("Flip camera?", &flipCamera);
 
-				ImGui::SliderFloat("CameraX", &cameraX, cameraMinFloat, cameraMaxFloat);	
-				ImGui::SliderFloat("CameraY", &cameraY, cameraMinFloat, cameraMaxFloat);
-				ImGui::SliderFloat("CameraZ", &cameraZ, cameraMinFloat, cameraMaxFloat);
+				//ImGui::Checkbox("Flip camera?", &flipCamera);
+
+				ImGui::DragFloat("Camera zoom", &radius, 0.1f, 0.0f, 20.0f);
 
 				//ImGui::ColorEdit3("clear color", (float*)&clear_color);						// Edit 3 floats representing a color
 
