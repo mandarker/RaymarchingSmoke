@@ -29,7 +29,7 @@ int main(void)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	/* Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
+	window = glfwCreateWindow(960, 720, "Raymarching Smoke", NULL, NULL);
 	if (!window)
 	{
 		glfwTerminate();
@@ -75,8 +75,9 @@ int main(void)
 
 		IndexBuffer ib(indices, 6);
 
-		glm::mat4 proj = glm::ortho(-2.0f, 2.0f, -1.5f, 1.5f, -1.0f, 1.0f);
-		glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
+		// Display range 0.1f units <----> 100.0f units
+		// glm::mat4 proj = glm::ortho(-2.0f, 2.0f, -1.5f, 1.5f, 0.1f, 100.0f);
+		glm::mat4 proj = glm::perspective(glm::radians(45.f), 1.33f, 0.1f, 100.0f);
 
 		Shader shader("res/shaders/Basic.shader");
 		shader.Bind();
@@ -100,15 +101,29 @@ int main(void)
 		ImGui_ImplGlfw_InitForOpenGL(window, true);
 		ImGui_ImplOpenGL3_Init((char *)glGetString(GL_NUM_SHADING_LANGUAGE_VERSIONS));
 
-		bool show_demo_window = true;
-		bool show_another_window = false;
+		bool display_first_object = true;
+		bool display_second_object = true;
 		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 		glm::vec3 translationA(0.5, 0.5, 0);
 		glm::vec3 translationB(-0.5, -0.5, 0);
 
-		float r = 0.0f;
-		float increment = 0.05f;
+		float cameraMinFloat = -100.0f;
+		float cameraMaxFloat = 100.0f;
+
+		float cameraX = -4.0f;
+		float cameraY = 3.0f;
+		float cameraZ = 3.0f;
+
+		float radius = 1;
+		float angle = 0;
+
+
+		glm::vec3 cameraPos = glm::vec3(cameraX, cameraY, cameraZ);
+
+		bool flipCamera = false;
+		int headY = 1;
+
 		/* Loop until the user closes the window */
 		while (!glfwWindowShouldClose(window))
 		{
@@ -121,7 +136,23 @@ int main(void)
 			
 			shader.Bind();
 			
+			angle += 0.01f;
+
+			// make camera move in circle
+			cameraX = radius * sin(angle);
+			cameraZ = radius * cos(angle);
+
+			headY = flipCamera ? -1 : 1;
+			// Change the camera position in real time
+			glm::mat4 view = glm::lookAt(
+				//glm::vec3(4, 3, 3), // Camera is at (4,3,3), in World Space
+				glm::vec3(cameraX, cameraY, cameraZ),
+				glm::vec3(0, 0, 0), // and looks at the origin
+				glm::vec3(0, headY, 0)  // Head is up (set to 0,-1,0 to look upside-down)
+			);
+
 			// render object 1
+			if (display_first_object)
 			{
 				glm::mat4 model = glm::translate(glm::mat4(1.0f), translationA);
 				glm::mat4 mvp = proj * view * model;
@@ -130,6 +161,7 @@ int main(void)
 			}
 
 			// render object 2
+			if (display_second_object)
 			{
 				glm::mat4 model = glm::translate(glm::mat4(1.0f), translationB);
 				glm::mat4 mvp = proj * view * model;
@@ -137,30 +169,27 @@ int main(void)
 				renderer.Draw(va, ib, shader);
 			}
 
-			if (r > 1.0f)
-				increment = -0.05f;
-			else if (r < 0.0f)
-				increment = 0.05f;
-
-			r += increment;
-
 			{
 				static float f = 0.0f;
 				static int counter = 0;
 
-				ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+				ImGui::Begin("Scene settings");												// Title of window
 
-				ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-				ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-				ImGui::Checkbox("Another Window", &show_another_window);
+				ImGui::Text("Edit the scene in real time with the settings below.");        // Display some text (you can use a format strings too)
+				ImGui::Checkbox("Show first object", &display_first_object);				// Edit bools storing our window open/close state
+				ImGui::Checkbox("Show second object", &display_second_object);
+				ImGui::Checkbox("Flip camera?", &flipCamera);
 
-				ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-				ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+				ImGui::SliderFloat("CameraX", &cameraX, cameraMinFloat, cameraMaxFloat);	
+				ImGui::SliderFloat("CameraY", &cameraY, cameraMinFloat, cameraMaxFloat);
+				ImGui::SliderFloat("CameraZ", &cameraZ, cameraMinFloat, cameraMaxFloat);
 
-				if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-					counter++;
-				ImGui::SameLine();
-				ImGui::Text("counter = %d", counter);
+				//ImGui::ColorEdit3("clear color", (float*)&clear_color);						// Edit 3 floats representing a color
+
+				//if (ImGui::Button("Button"))												// Buttons return true when clicked (most widgets return true when edited/activated)
+				//	counter++;
+				//ImGui::SameLine();
+				//ImGui::Text("counter = %d", counter);
 
 				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 				ImGui::End();
