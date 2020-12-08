@@ -1,5 +1,6 @@
 #include <GL\glew.h>
 #include <GLFW\glfw3.h>
+#include <vector>
 
 #include "Shader.h"
 #include "Renderer.h"
@@ -16,6 +17,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
+#include "OBJ-Loader/OBJ_Loader.h"
 
 int main(void)
 {
@@ -48,6 +50,20 @@ int main(void)
 
 	std::cout << glGetString(GL_VERSION) << std::endl;
 	{
+		objl::Loader loader;
+		loader.LoadFile("res/bunny2.obj");
+
+		float * bunnyPositions = new float[loader.LoadedVertices.size() * 3];
+		for (int i = 0; i < loader.LoadedVertices.size(); ++i) {
+			bunnyPositions[i * 3] = loader.LoadedVertices[i].Position.X;
+			bunnyPositions[i * 3 + 1] = loader.LoadedVertices[i].Position.Y;
+			bunnyPositions[i * 3 + 2] = loader.LoadedVertices[i].Position.Z;
+		}
+
+		unsigned int * bunnyIndices = new unsigned int[loader.LoadedIndices.size()];
+		for (int i = 0; i < loader.LoadedIndices.size(); ++i)
+			bunnyIndices[i] = loader.LoadedIndices[i];
+
 		float cubePositions[] = {
 			1, 1, 1,
 			1, -1, 1,
@@ -104,7 +120,6 @@ int main(void)
 		GLCall(glGenVertexArrays(1, &vao));
 		GLCall(glBindVertexArray(vao));
 
-		
 		/*VertexArray va;
 		VertexBuffer vb(positions, 4 * 4 * sizeof(float));
 		VertexBufferLayout layout;
@@ -112,7 +127,7 @@ int main(void)
 		layout.Push<float>(2);
 		va.AddBuffer(vb, layout);
 		
-		IndexBuffer ib(indices, 6);*/
+		IndexBuffer ib(indices, 6);
 
 		VertexArray va;
 		VertexBuffer vb(cubePositions, 8 * 3 * sizeof(float));
@@ -120,7 +135,15 @@ int main(void)
 		layout.Push<float>(3);
 		va.AddBuffer(vb, layout);
 
-		IndexBuffer ib(cubeIndices, 36);
+		IndexBuffer ib(cubeIndices, 36);*/
+
+		VertexArray va;
+		VertexBuffer vb(bunnyPositions, loader.LoadedVertices.size() * 3 * sizeof(float));
+		VertexBufferLayout layout;
+		layout.Push<float>(3);
+		va.AddBuffer(vb, layout);
+
+		IndexBuffer ib(bunnyIndices, loader.LoadedIndices.size());
 
 
 		// Display range 0.1f units <----> 100.0f units
@@ -154,10 +177,10 @@ int main(void)
 		bool display_second_object = true;
 		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-		glm::vec3 translationA(0, 0, 0);
+		glm::vec3 translationA(0, -0.1, 0);
 		glm::vec3 translationB(-0.5, -0.5, 0);
 
-		Camera cam = Camera(0.0f, 10.0f, 0.0f);
+		Camera cam = Camera(0.0f, 0.0f, 0.0f);
 
 		float radius = 10;
 		/* Loop until the user closes the window */
@@ -180,7 +203,7 @@ int main(void)
 			// render object 1
 			if (display_first_object)
 			{
-				glm::mat4 model = glm::mat4(1.0f);
+				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f)), translationA);
 				glm::mat4 mvp = proj * view * model;
 				shader.SetUniformMat4f("u_MVP", mvp);
 				renderer.Draw(va, ib, shader);
@@ -231,6 +254,9 @@ int main(void)
 			/* Poll for and process events */
 			glfwPollEvents();
 		}
+
+		delete[] bunnyPositions;
+		delete[] bunnyIndices;
 	}
 
 	ImGui_ImplOpenGL3_Shutdown();
