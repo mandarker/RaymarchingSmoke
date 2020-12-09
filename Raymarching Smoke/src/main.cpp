@@ -53,18 +53,32 @@ int main(void)
 		objl::Loader loader;
 		loader.LoadFile("res/bunny2.obj");
 
-		float * bunnyPositions = new float[loader.LoadedVertices.size() * 3];
-		for (int i = 0; i < loader.LoadedVertices.size(); ++i) {
-			bunnyPositions[i * 3] = loader.LoadedVertices[i].Position.X;
-			bunnyPositions[i * 3 + 1] = loader.LoadedVertices[i].Position.Y;
-			bunnyPositions[i * 3 + 2] = loader.LoadedVertices[i].Position.Z;
+		float * bunnyPositions = new float[loader.LoadedVertices.size() * 6];
+		for (unsigned int i = 0; i < loader.LoadedVertices.size(); ++i) {
+			bunnyPositions[i * 6] = loader.LoadedVertices[i].Position.X;
+			bunnyPositions[i * 6 + 1] = loader.LoadedVertices[i].Position.Y;
+			bunnyPositions[i * 6 + 2] = loader.LoadedVertices[i].Position.Z;
+			bunnyPositions[i * 6 + 3] = loader.LoadedVertices[i].Normal.X;
+			bunnyPositions[i * 6 + 4] = loader.LoadedVertices[i].Normal.Y;
+			bunnyPositions[i * 6 + 5] = loader.LoadedVertices[i].Normal.Z;
 		}
 
 		unsigned int * bunnyIndices = new unsigned int[loader.LoadedIndices.size()];
-		for (int i = 0; i < loader.LoadedIndices.size(); ++i)
+		for (unsigned int i = 0; i < loader.LoadedIndices.size(); ++i)
 			bunnyIndices[i] = loader.LoadedIndices[i];
 
 		float cubePositions[] = {
+			1, 1, 1,   1, 1, 1,
+			1, -1, 1,  1, -1, 1,
+			-1, 1, 1,  -1, 1, 1,
+			-1, -1, 1, -1, -1, 1,
+			1, 1, -1,  1, 1, -1,
+			1, -1, -1, 1, -1, -1,
+			-1, 1, -1, -1, 1, -1,
+			-1, -1, -1,-1, -1, -1,
+		};
+
+		int cubeNormals[] = {
 			1, 1, 1,
 			1, -1, 1,
 			-1, 1, 1,
@@ -88,17 +102,6 @@ int main(void)
 			5, 1, 0,
 			6, 2, 3,
 			3, 7, 6,
-		};
-
-		unsigned int cubeNormals[] = {
-			1, 1, 1,
-			1, -1, 1,
-			-1, 1, 1,
-			-1, -1, 1,
-			1, 1, -1,
-			1, -1, -1,
-			-1, 1, -1,
-			-1, -1, -1,
 		};
 
 		float positions[] = {
@@ -128,23 +131,25 @@ int main(void)
 		va.AddBuffer(vb, layout);
 		
 		IndexBuffer ib(indices, 6);
+		*/
 
-		VertexArray va;
-		VertexBuffer vb(cubePositions, 8 * 3 * sizeof(float));
-		VertexBufferLayout layout;
-		layout.Push<float>(3);
-		va.AddBuffer(vb, layout);
+		VertexArray cubeVa;
+		VertexBuffer cubeVb(cubePositions, 8 * 6 * sizeof(float));
+		VertexBufferLayout cubeLayout;
+		cubeLayout.Push<float>(3);
+		cubeLayout.Push<float>(3);
+		cubeVa.AddBuffer(cubeVb, cubeLayout);
 
-		IndexBuffer ib(cubeIndices, 36);*/
+		IndexBuffer cubeIb(cubeIndices, 36);
 
-		VertexArray va;
-		VertexBuffer vb(bunnyPositions, loader.LoadedVertices.size() * 3 * sizeof(float));
-		VertexBufferLayout layout;
-		layout.Push<float>(3);
-		va.AddBuffer(vb, layout);
+		VertexArray bunnyVa;
+		VertexBuffer bunnyVb(bunnyPositions, loader.LoadedVertices.size() * 6 * sizeof(float));
+		VertexBufferLayout bunnyLayout;
+		bunnyLayout.Push<float>(3);
+		bunnyLayout.Push<float>(3);
+		bunnyVa.AddBuffer(bunnyVb, bunnyLayout);
 
-		IndexBuffer ib(bunnyIndices, loader.LoadedIndices.size());
-
+		IndexBuffer bunnyIb(bunnyIndices, loader.LoadedIndices.size());
 
 		// Display range 0.1f units <----> 100.0f units
 		// glm::mat4 proj = glm::ortho(-2.0f, 2.0f, -1.5f, 1.5f, 0.1f, 100.0f);
@@ -155,11 +160,15 @@ int main(void)
 
 		Texture texture("res/cherno.png");
 		texture.Bind();
-		shader.SetUniform1i("u_Texture", 0);
+		//shader.SetUniform1i("u_Texture", 0);
+		
+		cubeVa.Unbind();
+		cubeVb.Unbind();
+		cubeIb.Unbind();
 
-		va.Unbind();
-		vb.Unbind();
-		ib.Unbind();
+		bunnyVa.Unbind();
+		bunnyVb.Unbind();
+		bunnyIb.Unbind();
 		shader.Unbind();
 
 		Renderer renderer;
@@ -178,7 +187,7 @@ int main(void)
 		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 		glm::vec3 translationA(0, -0.1, 0);
-		glm::vec3 translationB(-0.5, -0.5, 0);
+		glm::vec3 translationB(0, -7.5, 0);
 
 		Camera cam = Camera(0.0f, 0.0f, 0.0f);
 
@@ -200,26 +209,26 @@ int main(void)
 			// Change the camera position in real time
 			glm::mat4 view = cam.getView();
 
-			// render object 1
+			// Render bunny
 			if (display_first_object)
 			{
 				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f)), translationA);
 				glm::mat4 mvp = proj * view * model;
+				glm::vec3 lightsource = glm::vec3(1.0f, 2.0f, 3.0f);
 				shader.SetUniformMat4f("u_MVP", mvp);
-				renderer.Draw(va, ib, shader);
+				shader.SetUniformVec3f("u_Light", lightsource);
+				renderer.Draw(bunnyVa, bunnyIb, shader);
 			}
 
-			// render object 2
-			
+			// Render floor
 			if (display_second_object)
 			{
-				glm::mat4 model = glm::translate(glm::mat4(1.0f), translationB);
+				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 0.1f, 1.0f)), translationB);
 				glm::mat4 mvp = proj * view * model;
 				shader.SetUniformMat4f("u_MVP", mvp);
-				renderer.Draw(va, ib, shader);
+				renderer.Draw(cubeVa, cubeIb, shader);
 			}
 			
-
 			{
 				static float f = 0.0f;
 				static int counter = 0;
@@ -227,8 +236,8 @@ int main(void)
 				ImGui::Begin("Scene settings");												// Title of window
 
 				ImGui::Text("Edit the scene in real time with the settings below.");        // Display some text (you can use a format strings too)
-				ImGui::Checkbox("Show first object", &display_first_object);				// Edit bools storing our window open/close state
-				ImGui::Checkbox("Show second object", &display_second_object);
+				ImGui::Checkbox("Show bunny", &display_first_object);				// Edit bools storing our window open/close state
+				ImGui::Checkbox("Show square", &display_second_object);
 
 				//ImGui::Checkbox("Flip camera?", &flipCamera);
 
