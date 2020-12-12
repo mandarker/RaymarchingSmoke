@@ -10,7 +10,7 @@
 #include "VertexBufferLayout.h"
 #include "Texture.h"
 #include "Camera.h"
-#include "DensityField.h"
+#include "FrameBuffer.h"
 
 #include <iostream>
 #include "glm/glm.hpp"
@@ -19,6 +19,14 @@
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
 #include "OBJ-Loader/OBJ_Loader.h"
+
+// new stuff
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	// make sure the viewport matches the new window dimensions; note that width and 
+	// height will be significantly larger than specified on retina displays.
+	glViewport(0, 0, width, height);
+}
 
 int main(void)
 {
@@ -42,6 +50,9 @@ int main(void)
 
 	/* Make the window's context current */
 	glfwMakeContextCurrent(window);
+
+	// new stuff
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	// vsync
 	glfwSwapInterval(0);
@@ -105,34 +116,12 @@ int main(void)
 			3, 7, 6,
 		};
 
-		float positions[] = {
-			-0.5f, -0.5f, 0.0f, 0.0f,
-			 0.5f, -0.5f, 1.0f, 0.0f,
-			 0.5f,  0.5f, 1.0f, 1.0f,
-			 -0.5f, 0.5f, 0.0f, 1.0f,
-		};
-
-		unsigned int indices[] = {
-			0, 1, 2,
-			2, 3, 0
-		};
-
 		GLCall(glEnable(GL_BLEND));
 		GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
 		unsigned int vao;
 		GLCall(glGenVertexArrays(1, &vao));
 		GLCall(glBindVertexArray(vao));
-
-		/*VertexArray va;
-		VertexBuffer vb(positions, 4 * 4 * sizeof(float));
-		VertexBufferLayout layout;
-		layout.Push<float>(2);
-		layout.Push<float>(2);
-		va.AddBuffer(vb, layout);
-		
-		IndexBuffer ib(indices, 6);
-		*/
 
 		VertexArray cubeVa;
 		VertexBuffer cubeVb(cubePositions, 8 * 6 * sizeof(float));
@@ -159,10 +148,14 @@ int main(void)
 		Shader shader("res/shaders/Basic.shader");
 		shader.Bind();
 
-		Texture texture("res/cherno.png");
-		texture.Bind();
-		//shader.SetUniform1i("u_Texture", 0);
-		
+		Shader shadowShader("res/shaders/ShadowMapping.shader");
+		shadowShader.Bind();
+
+		unsigned int width = 1024;
+		unsigned int height = 1024;
+
+		FrameBuffer depth(width, height);
+
 		cubeVa.Unbind();
 		cubeVb.Unbind();
 		cubeIb.Unbind();
@@ -174,16 +167,6 @@ int main(void)
 
 		Renderer renderer;
 		renderer.EnableDepthTesting();
-
-		// DensityField stuff
-		DensityField field(-1, 1, -1, 1, -1, 1);
-		field.addPointsRandom(10);
-		std::list<std::tuple<glm::vec3, float>> rbf_list = field.getList();
-		std::vector<glm::vec3> rbf_points;
-
-		for (const auto& elem : rbf_list) {
-			rbf_points.push_back(std::get<0>(elem));
-		}
 
 		// setup ImGui
 		IMGUI_CHECKVERSION();
@@ -198,11 +181,17 @@ int main(void)
 		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 		glm::vec3 translationA(0, -0.1, 0);
-		glm::vec3 translationB(0, -7.5, 0);
+		glm::vec3 translationB(0, -6.5, 0);
 
 		Camera cam = Camera(0.0f, 0.0f, 0.0f);
 
+		// new stuff
+		float lightPosX = -2.0f;
+		float lightPosY = 4.0f;
+		float lightPosZ = -1.0f;
 		float radius = 10;
+		float angleDelta = 0.0005;
+
 		/* Loop until the user closes the window */
 		while (!glfwWindowShouldClose(window))
 		{
@@ -212,42 +201,75 @@ int main(void)
 			ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
-			
-			shader.Bind();
-			
+
 			cam.rotateCamera(radius);
+			cam.setAngleIncrement(angleDelta);
+
+			glm::vec3 lightPos(lightPosX, lightPosY, lightPosZ);
 
 			// Change the camera position in real time
 			glm::mat4 view = cam.getView();
 
-			glm::vec3 lightsource = glm::vec3(1.0f, 2.0f, 3.0f);
+			// new stuff
+			glm::mat4 lightProjection, lightView;
+			glm::mat4 lightSpaceMatrix;
+			float near_plane = 0.1f, far_plane = 100.0f;
+			//lightProjection = glm::perspective(glm::radians(45.0f), (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT, near_plane, far_plane); // note that if you use a perspective projection matrix you'll have to change the light position as the current light position isn't enough to reflect the whole scene
+			lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+			lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+			lightSpaceMatrix = lightProjection * lightView;
+			// render scene from light's point of view
+			shadowShader.Bind();
+			shadowShader.SetUniformMat4f("u_LightSpaceMatrix", lightSpaceMatrix);
+			
+			glViewport(0, 0, 1024, 1024);
+			depth.Bind();
+			glClear(GL_DEPTH_BUFFER_BIT);
+			glActiveTexture(GL_TEXTURE0);
+			glCullFace(GL_FRONT);
+			// Render bunny
+			if (display_first_object)
+			{
+				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f)), translationA);
+				shadowShader.SetUniformMat4f("u_Model", model);
+				renderer.Draw(bunnyVa, bunnyIb, shadowShader);
+			}
+
+			// Render floor
+			if (display_second_object)
+			{
+				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f, 0.1f, 10.0f)), translationB);
+				shadowShader.SetUniformMat4f("u_Model", model);
+				renderer.Draw(cubeVa, cubeIb, shadowShader);
+			}
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			glViewport(0, 0, 960, 720);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			shader.Bind();
+
+			shader.SetUniformMat4f("u_LightSpaceMatrix", lightSpaceMatrix);
+
+			glCullFace(GL_BACK);
+			glActiveTexture(GL_TEXTURE0);
+			depth.BindTexture();
+			shader.SetUniformMat4f("u_View", view);
+			shader.SetUniformMat4f("u_Proj", proj);
+			shader.SetUniformVec3f("u_Light", lightPos);
 
 			// Render bunny
-			//if (display_first_object)
-			//{
-			//	glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f)), translationA);
-			//	glm::mat4 mvp = proj * view * model;
-			//	shader.SetUniformMat4f("u_MVP", mvp);
-			//	shader.SetUniformVec3f("u_Light", lightsource);
-			//	renderer.Draw(bunnyVa, bunnyIb, shader);
-			//}
+			if (display_first_object)
+			{
+				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f)), translationA);
+				shader.SetUniformMat4f("u_Model", model);
+				renderer.Draw(bunnyVa, bunnyIb, shader);
+			}
 
-			//// Render floor
-			//if (display_second_object)
-			//{
-			//	glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 0.1f, 1.0f)), translationB);
-			//	glm::mat4 mvp = proj * view * model;
-			//	shader.SetUniformMat4f("u_MVP", mvp);
-			//	shader.SetUniformVec3f("u_Light", lightsource);
-			//	renderer.Draw(cubeVa, cubeIb, shader);
-			//}
-
-			for (const auto& elem : rbf_list) {
-				glm::mat4 model = glm::scale(glm::translate(glm::mat4(1.0f), std::get<0>(elem)), glm::vec3(0.01f));
-				glm::mat4 mvp = proj * view * model;
-				shader.SetUniformMat4f("u_MVP", mvp);
-				shader.SetUniformVec3f("u_Light", lightsource);
-				shader.SetUniform3fv("u_RBF", rbf_points, 10);
+			// Render floor
+			if (display_second_object)
+			{
+				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f, 0.1f, 10.0f)), translationB);
+				shader.SetUniformMat4f("u_Model", model);
 				renderer.Draw(cubeVa, cubeIb, shader);
 			}
 			
@@ -258,12 +280,18 @@ int main(void)
 				ImGui::Begin("Scene settings");												// Title of window
 
 				ImGui::Text("Edit the scene in real time with the settings below.");        // Display some text (you can use a format strings too)
-				//ImGui::Checkbox("Show bunny", &display_first_object);				// Edit bools storing our window open/close state
-				//ImGui::Checkbox("Show square", &display_second_object);
+				ImGui::Checkbox("Show bunny", &display_first_object);				// Edit bools storing our window open/close state
+				ImGui::Checkbox("Show square", &display_second_object);
 
 				//ImGui::Checkbox("Flip camera?", &flipCamera);
 
 				ImGui::DragFloat("Camera zoom", &radius, 0.1f, 0.0f, 20.0f);
+				ImGui::DragFloat("Camera spin", &angleDelta, 0.0001f, -0.001f, 0.001f);
+
+				ImGui::DragFloat("Light x", &lightPosX, 0.1f, -10.0f, 10.0f);
+				ImGui::DragFloat("Light y", &lightPosY, 0.1f, -10.0f, 10.0f);
+				ImGui::DragFloat("Light z", &lightPosZ, 0.1f, -10.0f, 10.0f);
+
 
 				//ImGui::ColorEdit3("clear color", (float*)&clear_color);						// Edit 3 floats representing a color
 

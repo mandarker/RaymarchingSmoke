@@ -17,7 +17,8 @@
     <ClCompile Include="src\vendor\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\vendor\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="src\Camera.cpp" />
-    <ClCompile Include="src\DensityField.cpp" />
+    <ClCompile Include="src\FrameBuffer.cpp" />
+    <ClCompile Include="res\shaders\ShadowMapping.shader" />
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\Basic.shader" />
@@ -459,10 +460,7 @@
     <ClInclude Include="src\vendor\imgui\imgui_impl_opengl3.h" />
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\vendor\OBJ-Loader\OBJ_Loader.h" />
-    <ClInclude Include="src\DensityField.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="res\cherno.png" />
+    <ClInclude Include="src\FrameBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="res\bunny.obj" />

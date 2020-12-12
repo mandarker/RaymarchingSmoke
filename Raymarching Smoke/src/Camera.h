@@ -10,9 +10,11 @@ public:
 	glm::mat4 getView();
 	glm::vec3 getPosition() const;
 	void rotateCamera(float radius);
+	void setAngleIncrement(float a);
 
 private:
 	glm::vec3 position;
 	float angle;
+	float angleIncrement;
 };
 
