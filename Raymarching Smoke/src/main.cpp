@@ -41,7 +41,7 @@ int main(void)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	/* Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(960, 720, "Raymarching Smoke", NULL, NULL);
+	window = glfwCreateWindow(960, 720, "Bunny", NULL, NULL);
 	if (!window)
 	{
 		glfwTerminate();
@@ -62,60 +62,6 @@ int main(void)
 
 	std::cout << glGetString(GL_VERSION) << std::endl;
 	{
-		objl::Loader loader;
-		loader.LoadFile("res/bunny2.obj");
-
-		float * bunnyPositions = new float[loader.LoadedVertices.size() * 6];
-		for (unsigned int i = 0; i < loader.LoadedVertices.size(); ++i) {
-			bunnyPositions[i * 6] = loader.LoadedVertices[i].Position.X;
-			bunnyPositions[i * 6 + 1] = loader.LoadedVertices[i].Position.Y;
-			bunnyPositions[i * 6 + 2] = loader.LoadedVertices[i].Position.Z;
-			bunnyPositions[i * 6 + 3] = loader.LoadedVertices[i].Normal.X;
-			bunnyPositions[i * 6 + 4] = loader.LoadedVertices[i].Normal.Y;
-			bunnyPositions[i * 6 + 5] = loader.LoadedVertices[i].Normal.Z;
-		}
-
-		unsigned int * bunnyIndices = new unsigned int[loader.LoadedIndices.size()];
-		for (unsigned int i = 0; i < loader.LoadedIndices.size(); ++i)
-			bunnyIndices[i] = loader.LoadedIndices[i];
-
-		float cubePositions[] = {
-			1, 1, 1,   1, 1, 1,
-			1, -1, 1,  1, -1, 1,
-			-1, 1, 1,  -1, 1, 1,
-			-1, -1, 1, -1, -1, 1,
-			1, 1, -1,  1, 1, -1,
-			1, -1, -1, 1, -1, -1,
-			-1, 1, -1, -1, 1, -1,
-			-1, -1, -1,-1, -1, -1,
-		};
-
-		int cubeNormals[] = {
-			1, 1, 1,
-			1, -1, 1,
-			-1, 1, 1,
-			-1, -1, 1,
-			1, 1, -1,
-			1, -1, -1,
-			-1, 1, -1,
-			-1, -1, -1,
-		};
-
-		unsigned int cubeIndices[] = {
-			6, 4, 0,
-			0, 2, 6,
-			2, 0, 1,
-			1, 3, 2,
-			3, 1, 5,
-			5, 7, 3,
-			7, 5, 4,
-			4, 6, 7,
-			0, 4, 5,
-			5, 1, 0,
-			6, 2, 3,
-			3, 7, 6,
-		};
-
 		GLCall(glEnable(GL_BLEND));
 		GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
@@ -123,23 +69,96 @@ int main(void)
 		GLCall(glGenVertexArrays(1, &vao));
 		GLCall(glBindVertexArray(vao));
 
-		VertexArray cubeVa;
-		VertexBuffer cubeVb(cubePositions, 8 * 6 * sizeof(float));
-		VertexBufferLayout cubeLayout;
-		cubeLayout.Push<float>(3);
-		cubeLayout.Push<float>(3);
-		cubeVa.AddBuffer(cubeVb, cubeLayout);
+		objl::Loader loader;
+		loader.LoadFile("res/bunny_corrected.obj");
 
-		IndexBuffer cubeIb(cubeIndices, 36);
+		float * bunnyPositions = new float[loader.LoadedVertices.size() * 8];
+		for (unsigned int i = 0; i < loader.LoadedVertices.size(); ++i) {
+			bunnyPositions[i * 8] = loader.LoadedVertices[i].Position.X;
+			bunnyPositions[i * 8 + 1] = loader.LoadedVertices[i].Position.Y;
+			bunnyPositions[i * 8 + 2] = loader.LoadedVertices[i].Position.Z;
+			bunnyPositions[i * 8 + 3] = loader.LoadedVertices[i].Normal.X;
+			bunnyPositions[i * 8 + 4] = loader.LoadedVertices[i].Normal.Y;
+			bunnyPositions[i * 8 + 5] = loader.LoadedVertices[i].Normal.Z;
+			bunnyPositions[i * 8 + 6] = loader.LoadedVertices[i].TextureCoordinate.X;
+			bunnyPositions[i * 8 + 7] = loader.LoadedVertices[i].TextureCoordinate.Y;
+		}
+
+		unsigned int * bunnyIndices = new unsigned int[loader.LoadedIndices.size()];
+		for (unsigned int i = 0; i < loader.LoadedIndices.size(); ++i)
+			bunnyIndices[i] = loader.LoadedIndices[i];
 
 		VertexArray bunnyVa;
-		VertexBuffer bunnyVb(bunnyPositions, loader.LoadedVertices.size() * 6 * sizeof(float));
+		VertexBuffer bunnyVb(bunnyPositions, loader.LoadedVertices.size() * 8 * sizeof(float));
 		VertexBufferLayout bunnyLayout;
 		bunnyLayout.Push<float>(3);
 		bunnyLayout.Push<float>(3);
+		bunnyLayout.Push<float>(2);
 		bunnyVa.AddBuffer(bunnyVb, bunnyLayout);
 
 		IndexBuffer bunnyIb(bunnyIndices, loader.LoadedIndices.size());
+
+		loader.LoadFile("res/Floor.obj");
+
+		float * floorPositions = new float[loader.LoadedVertices.size() * 11];
+		for (unsigned int i = 0; i < loader.LoadedVertices.size(); ++i) {
+			floorPositions[i * 11] = loader.LoadedVertices[i].Position.X;
+			floorPositions[i * 11 + 1] = loader.LoadedVertices[i].Position.Y;
+			floorPositions[i * 11 + 2] = loader.LoadedVertices[i].Position.Z;
+			floorPositions[i * 11 + 3] = loader.LoadedVertices[i].Normal.X;
+			floorPositions[i * 11 + 4] = loader.LoadedVertices[i].Normal.Y;
+			floorPositions[i * 11 + 5] = loader.LoadedVertices[i].Normal.Z;
+			floorPositions[i * 11 + 6] = loader.LoadedVertices[i].TextureCoordinate.X;
+			floorPositions[i * 11 + 7] = loader.LoadedVertices[i].TextureCoordinate.Y;
+			floorPositions[i * 11 + 8] = 0;
+			floorPositions[i * 11 + 9] = 0;
+			floorPositions[i * 11 + 10] = 0;
+		}
+
+		unsigned int * floorIndices = new unsigned int[loader.LoadedIndices.size()];
+		for (unsigned int i = 0; i < loader.LoadedIndices.size(); ++i)
+			floorIndices[i] = loader.LoadedIndices[i];
+
+		for (unsigned int i = 0; i < loader.LoadedIndices.size(); i += 3) {
+			unsigned int v0Index = loader.LoadedIndices[i];
+			unsigned int v1Index = loader.LoadedIndices[i + 1];
+			unsigned int v2Index = loader.LoadedIndices[i + 2];
+
+			glm::vec3 edge1 = glm::vec3(loader.LoadedVertices[v1Index].Position.X, loader.LoadedVertices[v1Index].Position.Y, loader.LoadedVertices[v1Index].Position.Z)
+				- glm::vec3(loader.LoadedVertices[v0Index].Position.X, loader.LoadedVertices[v0Index].Position.Y, loader.LoadedVertices[v0Index].Position.Z);
+			glm::vec3 edge2 = glm::vec3(loader.LoadedVertices[v2Index].Position.X, loader.LoadedVertices[v2Index].Position.Y, loader.LoadedVertices[v2Index].Position.Z)
+				- glm::vec3(loader.LoadedVertices[v0Index].Position.X, loader.LoadedVertices[v0Index].Position.Y, loader.LoadedVertices[v0Index].Position.Z);
+
+			float deltaU1 = loader.LoadedVertices[v1Index].TextureCoordinate.X - loader.LoadedVertices[v0Index].TextureCoordinate.X;
+			float deltaV1 = loader.LoadedVertices[v1Index].TextureCoordinate.Y - loader.LoadedVertices[v0Index].TextureCoordinate.Y;
+			float deltaU2 = loader.LoadedVertices[v2Index].TextureCoordinate.X - loader.LoadedVertices[v0Index].TextureCoordinate.X;
+			float deltaV2 = loader.LoadedVertices[v2Index].TextureCoordinate.Y - loader.LoadedVertices[v0Index].TextureCoordinate.Y;
+
+			float f = 1.0f / (deltaU1 * deltaV2 - deltaU2 * deltaV1);
+
+			glm::vec3 tangent;
+			
+			tangent.x = f * (deltaV2 * edge1.x - deltaV1 * edge2.x);
+			tangent.y = f * (deltaV2 * edge1.y - deltaV1 * edge2.y);
+			tangent.z = f * (deltaV2 * edge1.z - deltaV1 * edge2.z);
+
+			for (unsigned int i = 8; i < 11; ++i) {
+				floorPositions[v0Index * 11 + i] += tangent[i - 8];
+				floorPositions[v1Index * 11 + i] += tangent[i - 8];
+				floorPositions[v2Index * 11 + i] += tangent[i - 8];
+			}
+		}
+
+		VertexArray floorVa;
+		VertexBuffer floorVb(floorPositions, loader.LoadedVertices.size() * 11 * sizeof(float));
+		VertexBufferLayout floorLayout;
+		floorLayout.Push<float>(3);
+		floorLayout.Push<float>(3);
+		floorLayout.Push<float>(2);
+		floorLayout.Push<float>(3);
+		floorVa.AddBuffer(floorVb, floorLayout);
+
+		IndexBuffer floorIb(floorIndices, loader.LoadedIndices.size());
 
 		// Display range 0.1f units <----> 100.0f units
 		// glm::mat4 proj = glm::ortho(-2.0f, 2.0f, -1.5f, 1.5f, 0.1f, 100.0f);
@@ -148,22 +167,31 @@ int main(void)
 		Shader shader("res/shaders/Basic.shader");
 		shader.Bind();
 
+		Texture bunnyUV("res/uv_mapping.png");
+		Texture floorMap("res/wood_normals.png");
+
 		Shader shadowShader("res/shaders/ShadowMapping.shader");
 		shadowShader.Bind();
 
-		unsigned int width = 1024;
-		unsigned int height = 1024;
+		Shader floorShader("res/shaders/BumpMapping.shader");
+		floorShader.Bind();
+
+		unsigned int width = 2048;
+		unsigned int height = 2048;
 
 		FrameBuffer depth(width, height);
 
-		cubeVa.Unbind();
-		cubeVb.Unbind();
-		cubeIb.Unbind();
+		floorVa.Unbind();
+		floorVb.Unbind();
+		floorIb.Unbind();
 
 		bunnyVa.Unbind();
 		bunnyVb.Unbind();
 		bunnyIb.Unbind();
+
 		shader.Unbind();
+		shadowShader.Unbind();
+		floorShader.Unbind();
 
 		Renderer renderer;
 		renderer.EnableDepthTesting();
@@ -180,17 +208,19 @@ int main(void)
 		bool display_second_object = true;
 		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-		glm::vec3 translationA(0, -0.1, 0);
-		glm::vec3 translationB(0, -6.5, 0);
+		glm::vec3 translationA(0, 0, 0);
+		glm::vec3 translationB(0, 0, 0);
 
 		Camera cam = Camera(0.0f, 0.0f, 0.0f);
 
 		// new stuff
 		float lightPosX = -2.0f;
-		float lightPosY = 4.0f;
+		float lightPosY = 7.0f;
 		float lightPosZ = -1.0f;
 		float radius = 10;
 		float angleDelta = 0.0005;
+
+		auto floorColor = ImColor(255, 255, 255);
 
 		/* Loop until the user closes the window */
 		while (!glfwWindowShouldClose(window))
@@ -222,7 +252,7 @@ int main(void)
 			shadowShader.Bind();
 			shadowShader.SetUniformMat4f("u_LightSpaceMatrix", lightSpaceMatrix);
 			
-			glViewport(0, 0, 1024, 1024);
+			glViewport(0, 0, width, height);
 			depth.Bind();
 			glClear(GL_DEPTH_BUFFER_BIT);
 			glActiveTexture(GL_TEXTURE0);
@@ -238,15 +268,18 @@ int main(void)
 			// Render floor
 			if (display_second_object)
 			{
-				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f, 0.1f, 10.0f)), translationB);
+				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(5.0f)), translationB);
 				shadowShader.SetUniformMat4f("u_Model", model);
-				renderer.Draw(cubeVa, cubeIb, shadowShader);
+				renderer.Draw(floorVa, floorIb, shadowShader);
 			}
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			glViewport(0, 0, 960, 720);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			shader.Bind();
+
+			bunnyUV.Bind(1);
+			shader.SetUniform1i("u_Texture", 1);
 
 			shader.SetUniformMat4f("u_LightSpaceMatrix", lightSpaceMatrix);
 
@@ -265,12 +298,22 @@ int main(void)
 				renderer.Draw(bunnyVa, bunnyIb, shader);
 			}
 
+			floorShader.Bind();
+			floorMap.Bind(1);
+
+			floorShader.SetUniform1i("u_Texture", 1);
+			floorShader.SetUniformMat4f("u_LightSpaceMatrix", lightSpaceMatrix);
+			floorShader.SetUniformMat4f("u_View", view);
+			floorShader.SetUniformMat4f("u_Proj", proj);
+			floorShader.SetUniformVec3f("u_Light", lightPos);
+			floorShader.SetUniformVec3f("u_Color", glm::vec3(floorColor.Value.x, floorColor.Value.y, floorColor.Value.z));
+
 			// Render floor
 			if (display_second_object)
 			{
-				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f, 0.1f, 10.0f)), translationB);
-				shader.SetUniformMat4f("u_Model", model);
-				renderer.Draw(cubeVa, cubeIb, shader);
+				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(5.0f)), translationB);
+				floorShader.SetUniformMat4f("u_Model", model);
+				renderer.Draw(floorVa, floorIb, floorShader);
 			}
 			
 			{
@@ -285,13 +328,14 @@ int main(void)
 
 				//ImGui::Checkbox("Flip camera?", &flipCamera);
 
-				ImGui::DragFloat("Camera zoom", &radius, 0.1f, 0.0f, 20.0f);
+				ImGui::DragFloat("Camera zoom", &radius, 0.1f, 5.0f, 20.0f);
 				ImGui::DragFloat("Camera spin", &angleDelta, 0.0001f, -0.001f, 0.001f);
 
-				ImGui::DragFloat("Light x", &lightPosX, 0.1f, -10.0f, 10.0f);
-				ImGui::DragFloat("Light y", &lightPosY, 0.1f, -10.0f, 10.0f);
-				ImGui::DragFloat("Light z", &lightPosZ, 0.1f, -10.0f, 10.0f);
+				ImGui::DragFloat("Light x", &lightPosX, 0.1f, -8.0f, 8.0f);
+				ImGui::DragFloat("Light z", &lightPosZ, 0.1f, -8.0f, 8.0f);
 
+
+				ImGui::ColorEdit3("Color of floor", (float*)&floorColor);
 
 				//ImGui::ColorEdit3("clear color", (float*)&clear_color);						// Edit 3 floats representing a color
 
