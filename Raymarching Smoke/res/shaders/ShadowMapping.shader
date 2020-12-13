@@ -10,11 +10,3 @@ void main()
 {
     gl_Position = u_LightSpaceMatrix * u_Model * position;
 }
-
-#shader fragment
-#version 330 core
-
-void main()
-{             
-    // gl_FragDepth = gl_FragCoord.z;
-}

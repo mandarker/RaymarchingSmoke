@@ -28,7 +28,7 @@ FrameBuffer::FrameBuffer(const unsigned int shadowWidth, const unsigned int shad
 
 FrameBuffer::~FrameBuffer()
 {
-	GLCall(glDeleteProgram(m_RendererID));
+	GLCall(glDeleteFramebuffers(1, &m_RendererID));
 }
 
 void FrameBuffer::Bind() const

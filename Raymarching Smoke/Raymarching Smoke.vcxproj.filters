@@ -20,6 +20,7 @@
     <ClCompile Include="src\FrameBuffer.cpp" />
     <ClCompile Include="res\shaders\ShadowMapping.shader" />
     <ClCompile Include="res\shaders\BumpMapping.shader" />
+    <ClCompile Include="src\Object.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\Basic.shader" />
@@ -462,6 +463,7 @@
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\vendor\OBJ-Loader\OBJ_Loader.h" />
     <ClInclude Include="src\FrameBuffer.h" />
+    <ClInclude Include="src\Object.h" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="res\bunny.obj" />

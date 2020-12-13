@@ -20,14 +20,6 @@
 #include "imgui/imgui_impl_opengl3.h"
 #include "OBJ-Loader/OBJ_Loader.h"
 
-// new stuff
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	// make sure the viewport matches the new window dimensions; note that width and 
-	// height will be significantly larger than specified on retina displays.
-	glViewport(0, 0, width, height);
-}
-
 int main(void)
 {
 	GLFWwindow* window;
@@ -51,14 +43,13 @@ int main(void)
 	/* Make the window's context current */
 	glfwMakeContextCurrent(window);
 
-	// new stuff
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
 	// vsync
 	glfwSwapInterval(0);
 
-	if (glewInit() != GLEW_OK)
-		std::cout << "Error" << std::endl;
+	if (glewInit() != GLEW_OK) {
+		std::cout << "failed to init GLEW" << std::endl;
+		return -1;
+	}
 
 	std::cout << glGetString(GL_VERSION) << std::endl;
 	{
@@ -137,7 +128,7 @@ int main(void)
 			float f = 1.0f / (deltaU1 * deltaV2 - deltaU2 * deltaV1);
 
 			glm::vec3 tangent;
-			
+
 			tangent.x = f * (deltaV2 * edge1.x - deltaV1 * edge2.x);
 			tangent.y = f * (deltaV2 * edge1.y - deltaV1 * edge2.y);
 			tangent.z = f * (deltaV2 * edge1.z - deltaV1 * edge2.z);
@@ -167,14 +158,14 @@ int main(void)
 		Shader shader("res/shaders/Basic.shader");
 		shader.Bind();
 
-		Texture bunnyUV("res/uv_mapping.png");
-		Texture floorMap("res/wood_normals.png");
-
 		Shader shadowShader("res/shaders/ShadowMapping.shader");
 		shadowShader.Bind();
 
 		Shader floorShader("res/shaders/BumpMapping.shader");
 		floorShader.Bind();
+
+		Texture bunnyUV("res/uv_mapping.png");
+		Texture floorMap("res/wood_normals.png");
 
 		unsigned int width = 2048;
 		unsigned int height = 2048;
@@ -204,28 +195,32 @@ int main(void)
 		ImGui_ImplGlfw_InitForOpenGL(window, true);
 		ImGui_ImplOpenGL3_Init((char *)glGetString(GL_NUM_SHADING_LANGUAGE_VERSIONS));
 
-		bool display_first_object = true;
-		bool display_second_object = true;
+		bool displayBunny = true;
+		bool displayFloor = true;
 		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-		glm::vec3 translationA(0, 0, 0);
-		glm::vec3 translationB(0, 0, 0);
+		glm::vec3 bunnyTranslation(0, 0, 0);
+		glm::vec3 floorTranslation(0, 0, 0);
 
 		Camera cam = Camera(0.0f, 0.0f, 0.0f);
 
-		// new stuff
+		glm::mat4 bunnyModel = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f)), bunnyTranslation);
+		glm::mat4 floorModel = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(5.0f)), floorTranslation);
+
+		// Variables to be used / updated in the window loop
 		float lightPosX = -2.0f;
 		float lightPosY = 7.0f;
 		float lightPosZ = -1.0f;
 		float radius = 10;
 		float angleDelta = 0.0005;
 
-		auto floorColor = ImColor(255, 255, 255);
+		auto floorColor = ImColor(94, 76, 33);
+		auto lightColor = ImColor(255, 255, 255);
+		auto specularColor = ImColor(255, 255, 255);
 
 		/* Loop until the user closes the window */
 		while (!glfwWindowShouldClose(window))
 		{
-			/* Render here */
 			renderer.Clear();
 
 			ImGui_ImplOpenGL3_NewFrame();
@@ -236,97 +231,99 @@ int main(void)
 			cam.setAngleIncrement(angleDelta);
 
 			glm::vec3 lightPos(lightPosX, lightPosY, lightPosZ);
+			glm::vec3 lightColorVec3(lightColor.Value.x, lightColor.Value.y, lightColor.Value.z);
+			glm::vec3 floorColorVec3(floorColor.Value.x, floorColor.Value.y, floorColor.Value.z);
+			glm::vec3 specularColorVec3(specularColor.Value.x, specularColor.Value.y, specularColor.Value.z);
 
 			// Change the camera position in real time
 			glm::mat4 view = cam.getView();
 
-			// new stuff
 			glm::mat4 lightProjection, lightView;
 			glm::mat4 lightSpaceMatrix;
 			float near_plane = 0.1f, far_plane = 100.0f;
-			//lightProjection = glm::perspective(glm::radians(45.0f), (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT, near_plane, far_plane); // note that if you use a perspective projection matrix you'll have to change the light position as the current light position isn't enough to reflect the whole scene
+
+			// note that if you use a perspective projection matrix you'll have to change the light position as the current light position sn't enough to reflect the whole scene
+			//lightProjection = glm::perspective(glm::radians(45.0f), (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT, near_plane, far_plane); i
 			lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
 			lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
 			lightSpaceMatrix = lightProjection * lightView;
-			// render scene from light's point of view
+			
+			// Render scene from light's point of view
 			shadowShader.Bind();
 			shadowShader.SetUniformMat4f("u_LightSpaceMatrix", lightSpaceMatrix);
-			
+
 			glViewport(0, 0, width, height);
 			depth.Bind();
 			glClear(GL_DEPTH_BUFFER_BIT);
 			glActiveTexture(GL_TEXTURE0);
 			glCullFace(GL_FRONT);
+
 			// Render bunny
-			if (display_first_object)
+			if (displayBunny)
 			{
-				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f)), translationA);
-				shadowShader.SetUniformMat4f("u_Model", model);
+				shadowShader.SetUniformMat4f("u_Model", bunnyModel);
 				renderer.Draw(bunnyVa, bunnyIb, shadowShader);
 			}
 
 			// Render floor
-			if (display_second_object)
+			if (displayFloor)
 			{
-				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(5.0f)), translationB);
-				shadowShader.SetUniformMat4f("u_Model", model);
+				shadowShader.SetUniformMat4f("u_Model", floorModel);
 				renderer.Draw(floorVa, floorIb, shadowShader);
 			}
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+			// Render scene from camera's point of view
 			glViewport(0, 0, 960, 720);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			shader.Bind();
 
-			bunnyUV.Bind(1);
-			shader.SetUniform1i("u_Texture", 1);
-
-			shader.SetUniformMat4f("u_LightSpaceMatrix", lightSpaceMatrix);
-
-			glCullFace(GL_BACK);
-			glActiveTexture(GL_TEXTURE0);
-			depth.BindTexture();
-			shader.SetUniformMat4f("u_View", view);
-			shader.SetUniformMat4f("u_Proj", proj);
-			shader.SetUniformVec3f("u_Light", lightPos);
-
 			// Render bunny
-			if (display_first_object)
+			if (displayBunny)
 			{
-				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(10.0f)), translationA);
-				shader.SetUniformMat4f("u_Model", model);
+				bunnyUV.Bind(1);
+				shader.SetUniform1i("u_Texture", 1);
+
+				shader.SetUniformMat4f("u_LightSpaceMatrix", lightSpaceMatrix);
+
+				glCullFace(GL_BACK);
+				glActiveTexture(GL_TEXTURE0);
+				depth.BindTexture();
+				shader.SetUniformMat4f("u_View", view);
+				shader.SetUniformMat4f("u_Proj", proj);
+				shader.SetUniformVec3f("u_Light", lightPos);
+				shader.SetUniformVec3f("u_LightColor", lightColorVec3);
+				shader.SetUniformVec3f("u_SpecularColor", specularColorVec3);
+
+				shader.SetUniformMat4f("u_Model", bunnyModel);
 				renderer.Draw(bunnyVa, bunnyIb, shader);
 			}
 
-			floorShader.Bind();
-			floorMap.Bind(1);
-
-			floorShader.SetUniform1i("u_Texture", 1);
-			floorShader.SetUniformMat4f("u_LightSpaceMatrix", lightSpaceMatrix);
-			floorShader.SetUniformMat4f("u_View", view);
-			floorShader.SetUniformMat4f("u_Proj", proj);
-			floorShader.SetUniformVec3f("u_Light", lightPos);
-			floorShader.SetUniformVec3f("u_Color", glm::vec3(floorColor.Value.x, floorColor.Value.y, floorColor.Value.z));
-
 			// Render floor
-			if (display_second_object)
+			if (displayFloor)
 			{
-				glm::mat4 model = glm::translate(glm::scale(glm::mat4(1.0f), glm::vec3(5.0f)), translationB);
-				floorShader.SetUniformMat4f("u_Model", model);
+				floorShader.Bind();
+				floorMap.Bind(1);
+
+				floorShader.SetUniform1i("u_Texture", 1);
+				floorShader.SetUniformMat4f("u_LightSpaceMatrix", lightSpaceMatrix);
+				floorShader.SetUniformMat4f("u_View", view);
+				floorShader.SetUniformMat4f("u_Proj", proj);
+				floorShader.SetUniformVec3f("u_Light", lightPos);
+				floorShader.SetUniformVec3f("u_LightColor", lightColorVec3);
+				floorShader.SetUniformVec3f("u_Color", floorColorVec3);
+				floorShader.SetUniformVec3f("u_SpecularColor", specularColorVec3);
+
+				floorShader.SetUniformMat4f("u_Model", floorModel);
 				renderer.Draw(floorVa, floorIb, floorShader);
 			}
-			
-			{
-				static float f = 0.0f;
-				static int counter = 0;
 
+			{
 				ImGui::Begin("Scene settings");												// Title of window
 
 				ImGui::Text("Edit the scene in real time with the settings below.");        // Display some text (you can use a format strings too)
-				ImGui::Checkbox("Show bunny", &display_first_object);				// Edit bools storing our window open/close state
-				ImGui::Checkbox("Show square", &display_second_object);
-
-				//ImGui::Checkbox("Flip camera?", &flipCamera);
+				ImGui::Checkbox("Show bunny", &displayBunny);				// Edit bools storing our window open/close state
+				ImGui::Checkbox("Show square", &displayFloor);
 
 				ImGui::DragFloat("Camera zoom", &radius, 0.1f, 5.0f, 20.0f);
 				ImGui::DragFloat("Camera spin", &angleDelta, 0.0001f, -0.001f, 0.001f);
@@ -334,15 +331,9 @@ int main(void)
 				ImGui::DragFloat("Light x", &lightPosX, 0.1f, -8.0f, 8.0f);
 				ImGui::DragFloat("Light z", &lightPosZ, 0.1f, -8.0f, 8.0f);
 
-
-				ImGui::ColorEdit3("Color of floor", (float*)&floorColor);
-
-				//ImGui::ColorEdit3("clear color", (float*)&clear_color);						// Edit 3 floats representing a color
-
-				//if (ImGui::Button("Button"))												// Buttons return true when clicked (most widgets return true when edited/activated)
-				//	counter++;
-				//ImGui::SameLine();
-				//ImGui::Text("counter = %d", counter);
+				ImGui::ColorEdit3("Specular color", (float*)&specularColor);
+				ImGui::ColorEdit3("Light color", (float*)&lightColor);
+				ImGui::ColorEdit3("Floor color", (float*)&floorColor);
 
 				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 				ImGui::End();
@@ -358,8 +349,12 @@ int main(void)
 			glfwPollEvents();
 		}
 
+		// Clean arrays
 		delete[] bunnyPositions;
 		delete[] bunnyIndices;
+
+		delete[] floorPositions;
+		delete[] floorIndices;
 	}
 
 	ImGui_ImplOpenGL3_Shutdown();
