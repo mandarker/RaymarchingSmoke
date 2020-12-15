@@ -165,6 +165,9 @@ int main(void)
 		floorShader.Bind();
 
 		Texture bunnyUV("res/uv_mapping.png");
+		Texture bunnyUVALT("res/uv_mapping_ALT.png");
+		Texture bunnyUVNone("res/uv_mapping_none.png");
+
 		Texture floorMap("res/wood_normals.png");
 
 		unsigned int width = 2048;
@@ -213,6 +216,8 @@ int main(void)
 		float lightPosZ = -1.0f;
 		float radius = 10;
 		float angleDelta = 0;
+
+		int textureOption = 0; // 0, 1, 2 for the bunny textures
 
 		auto floorColor = ImColor(94, 76, 33);
 		auto lightColor = ImColor(255, 255, 255);
@@ -281,7 +286,17 @@ int main(void)
 			// Render bunny
 			if (displayBunny)
 			{
-				bunnyUV.Bind(1);
+				switch (textureOption) {
+				case 0:
+					bunnyUV.Bind(1);
+					break;
+				case 1:
+					bunnyUVALT.Bind(1);
+					break;
+				default:
+					bunnyUVNone.Bind(1);
+					break;
+				}
 				shader.SetUniform1i("u_Texture", 1);
 
 				shader.SetUniformMat4f("u_LightSpaceMatrix", lightSpaceMatrix);
@@ -322,14 +337,24 @@ int main(void)
 				ImGui::Begin("Scene settings");	// Title of window
 
 				ImGui::Text("Edit the scene in real time with the settings below.");        
-				ImGui::Checkbox("Show bunny", &displayBunny);				
+				ImGui::Checkbox("Show bunny", &displayBunny);		
+				ImGui::SameLine();
 				ImGui::Checkbox("Show floor", &displayFloor);
 
+				ImGui::Text("Bunny textures");
+				ImGui::RadioButton("Brown / blue", &textureOption, 0);
+				ImGui::SameLine();
+				ImGui::RadioButton("Orange", &textureOption, 1);
+				ImGui::SameLine();
+				ImGui::RadioButton("Gray", &textureOption, 2);
+
+				ImGui::Text("Camera / lighting controls");
 				ImGui::DragFloat("Camera zoom", &radius, 0.1f, 5.0f, 20.0f);
 				ImGui::DragFloat("Camera spin", &angleDelta, 0.025f, -1.0f, 1.0f);
 				ImGui::DragFloat("Light x", &lightPosX, 0.1f, -8.0f, 8.0f);
 				ImGui::DragFloat("Light z", &lightPosZ, 0.1f, -8.0f, 8.0f);
 
+				ImGui::Text("Color controls");
 				ImGui::ColorEdit3("Specular color", (float*)&specularColor);
 				ImGui::ColorEdit3("Light color", (float*)&lightColor);
 				ImGui::ColorEdit3("Floor color", (float*)&floorColor);
