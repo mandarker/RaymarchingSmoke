@@ -212,7 +212,7 @@ int main(void)
 		float lightPosY = 7.0f;
 		float lightPosZ = -1.0f;
 		float radius = 10;
-		float angleDelta = 0.0005;
+		float angleDelta = 0;
 
 		auto floorColor = ImColor(94, 76, 33);
 		auto lightColor = ImColor(255, 255, 255);
@@ -228,7 +228,7 @@ int main(void)
 			ImGui::NewFrame();
 
 			cam.rotateCamera(radius);
-			cam.setAngleIncrement(angleDelta);
+			cam.setAngleIncrement(angleDelta/500);
 
 			glm::vec3 lightPos(lightPosX, lightPosY, lightPosZ);
 			glm::vec3 lightColorVec3(lightColor.Value.x, lightColor.Value.y, lightColor.Value.z);
@@ -319,15 +319,14 @@ int main(void)
 			}
 
 			{
-				ImGui::Begin("Scene settings");												// Title of window
+				ImGui::Begin("Scene settings");	// Title of window
 
-				ImGui::Text("Edit the scene in real time with the settings below.");        // Display some text (you can use a format strings too)
-				ImGui::Checkbox("Show bunny", &displayBunny);				// Edit bools storing our window open/close state
-				ImGui::Checkbox("Show square", &displayFloor);
+				ImGui::Text("Edit the scene in real time with the settings below.");        
+				ImGui::Checkbox("Show bunny", &displayBunny);				
+				ImGui::Checkbox("Show floor", &displayFloor);
 
 				ImGui::DragFloat("Camera zoom", &radius, 0.1f, 5.0f, 20.0f);
-				ImGui::DragFloat("Camera spin", &angleDelta, 0.0001f, -0.001f, 0.001f);
-
+				ImGui::DragFloat("Camera spin", &angleDelta, 0.025f, -1.0f, 1.0f);
 				ImGui::DragFloat("Light x", &lightPosX, 0.1f, -8.0f, 8.0f);
 				ImGui::DragFloat("Light z", &lightPosZ, 0.1f, -8.0f, 8.0f);
 
