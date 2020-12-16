@@ -166,6 +166,7 @@ int main(void)
 
 		Texture bunnyUV("res/uv_mapping.png");
 		Texture bunnyUVALT("res/uv_mapping_ALT.png");
+		Texture bunnyUVALT2("res/uv_mapping_ALT2.png");
 		Texture bunnyUVNone("res/uv_mapping_none.png");
 
 		Texture floorMap("res/wood_normals.png");
@@ -217,7 +218,7 @@ int main(void)
 		float radius = 10;
 		float angleDelta = 0;
 
-		int textureOption = 0; // 0, 1, 2 for the bunny textures
+		int textureOption = 0; // 0, 1, 2, 3 for the bunny textures
 
 		auto floorColor = ImColor(94, 76, 33);
 		auto lightColor = ImColor(255, 255, 255);
@@ -293,6 +294,9 @@ int main(void)
 				case 1:
 					bunnyUVALT.Bind(1);
 					break;
+				case 2:
+					bunnyUVALT2.Bind(1);
+					break;
 				default:
 					bunnyUVNone.Bind(1);
 					break;
@@ -346,7 +350,9 @@ int main(void)
 				ImGui::SameLine();
 				ImGui::RadioButton("Orange", &textureOption, 1);
 				ImGui::SameLine();
-				ImGui::RadioButton("Gray", &textureOption, 2);
+				ImGui::RadioButton("Checkered", &textureOption, 2);
+				ImGui::SameLine();
+				ImGui::RadioButton("Gray", &textureOption, 3);
 
 				ImGui::Text("Camera / lighting controls");
 				ImGui::DragFloat("Camera zoom", &radius, 0.1f, 5.0f, 20.0f);
